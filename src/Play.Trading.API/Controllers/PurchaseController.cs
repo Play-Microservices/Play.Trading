@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Play.Trading.API.Contracts;
 
-namespace Play.Trading.API.Controller;
+namespace Play.Trading.API.Controllers;
 
 [ApiController]
 [Route("[controller]")]

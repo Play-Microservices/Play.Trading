@@ -1,9 +1,15 @@
+using MassTransit;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using Play.Common.Identity;
+using Play.Common.MassTransit;
+using Play.Common.MongoDB;
+using Play.Common.Settings;
+using Play.Trading.API.StateMachines;
 
 namespace Play.Trading.API;
 
@@ -19,6 +25,9 @@ public class Startup
     // This method gets called by the runtime. Use this method to add services to the container.
     public void ConfigureServices(IServiceCollection services)
     {
+        services.AddMongo(Configuration)
+            .AddJwtBearerAuthentication();
+        AddMassTransit(services);
 
         services.AddControllers();
         services.AddSwaggerGen(c =>
@@ -40,12 +49,31 @@ public class Startup
         app.UseHttpsRedirection();
 
         app.UseRouting();
-
+        
+        app.UseAuthentication();
+        
         app.UseAuthorization();
 
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllers();
         });
+    }
+
+    private void AddMassTransit(IServiceCollection services)
+    {
+        services.AddMassTransit(configure =>
+        {
+            configure.UsingPlayEconomyRabbitMQ();
+            configure.AddSagaStateMachine<PurchaseStateMachine, PurchaseState>()
+                .MongoDbRepository(r =>
+                {
+                    var serviceSettings = Configuration.GetSection(nameof(ServiceSettings)).Get<ServiceSettings>();
+                    var mongoSettings = Configuration.GetSection(nameof(MongoDbSettings)).Get<MongoDbSettings>();
+                    r.Connection = mongoSettings.ConnectionString;
+                    r.DatabaseName = serviceSettings.ServiceName;
+                });
+        });
+        services.AddMassTransitHostedService();
     }
 }
