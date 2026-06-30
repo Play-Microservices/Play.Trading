@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using MassTransit;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -29,7 +30,14 @@ public class Startup
             .AddJwtBearerAuthentication();
         AddMassTransit(services);
 
-        services.AddControllers();
+        services.AddControllers(options =>
+        {
+            options.SuppressAsyncSuffixInActionNames = false;
+        })
+        .AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        });
         services.AddSwaggerGen(c =>
         {
             c.SwaggerDoc("v1", new OpenApiInfo { Title = "Play.Trading.API", Version = "v1" });
@@ -75,5 +83,6 @@ public class Startup
                 });
         });
         services.AddMassTransitHostedService();
+        services.AddGenericRequestClient();
     }
 }
