@@ -13,6 +13,7 @@ using Play.Common.Identity;
 using Play.Common.MassTransit;
 using Play.Common.MongoDB;
 using Play.Common.Settings;
+using Play.Identity.Contracts;
 using Play.Inventory.Contracts;
 using Play.Trading.API.Entities;
 using Play.Trading.API.Exceptions;
@@ -86,7 +87,10 @@ public class Startup
                 retryConfigurator.Ignore<UnknownItemException>();
             });
             configure.AddConsumers(Assembly.GetEntryAssembly());
-            configure.AddSagaStateMachine<PurchaseStateMachine, PurchaseState>()
+            configure.AddSagaStateMachine<PurchaseStateMachine, PurchaseState>(sagaConfigurator =>
+                {
+                    sagaConfigurator.UseInMemoryOutbox();
+                })
                 .MongoDbRepository(r =>
                 {
                     var serviceSettings = Configuration.GetSection(nameof(ServiceSettings)).Get<ServiceSettings>();
@@ -98,6 +102,7 @@ public class Startup
         
         var queueSettings = Configuration.GetSection(nameof(QueueSettings)).Get<QueueSettings>();
         EndpointConvention.Map<GrantItems>(new Uri(queueSettings.GrantItemsQueueAddress));
+        EndpointConvention.Map<DebitGil>(new Uri(queueSettings.DebitGilQueueAddress));
         
         services.AddMassTransitHostedService();
         services.AddGenericRequestClient();
