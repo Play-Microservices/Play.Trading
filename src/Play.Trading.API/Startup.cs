@@ -1,5 +1,7 @@
+using System;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using GreenPipes;
 using MassTransit;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -12,6 +14,7 @@ using Play.Common.MassTransit;
 using Play.Common.MongoDB;
 using Play.Common.Settings;
 using Play.Trading.API.Entities;
+using Play.Trading.API.Exceptions;
 using Play.Trading.API.StateMachines;
 
 namespace Play.Trading.API;
@@ -75,7 +78,11 @@ public class Startup
     {
         services.AddMassTransit(configure =>
         {
-            configure.UsingPlayEconomyRabbitMQ();
+            configure.UsingPlayEconomyRabbitMQ(retryConfigurator =>
+            {
+                retryConfigurator.Interval(3, TimeSpan.FromSeconds(5));
+                retryConfigurator.Ignore<UnknownItemException>();
+            });
             configure.AddConsumers(Assembly.GetEntryAssembly());
             configure.AddSagaStateMachine<PurchaseStateMachine, PurchaseState>()
                 .MongoDbRepository(r =>
