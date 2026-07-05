@@ -1,5 +1,6 @@
 using System;
 using Automatonymous;
+using Play.Inventory.Contracts;
 using Play.Trading.API.Activities;
 using Play.Trading.API.Contracts;
 
@@ -14,6 +15,7 @@ public class PurchaseStateMachine : MassTransitStateMachine<PurchaseState>
     
     public Event<PurchaseRequested> PurchaseRequested { get; }
     public Event<GetPurchaseState> GetPurchaseState { get; }
+    public Event<InventoryItemsGranted> InventoryItemsGranted { get; }
 
     public PurchaseStateMachine()
     {
@@ -21,12 +23,14 @@ public class PurchaseStateMachine : MassTransitStateMachine<PurchaseState>
         ConfigureEvents();
         ConfigureInitialState();
         ConfigureAny();
+        ConfigureAccepted();
     }
 
     private void ConfigureEvents()
     {
         Event(() => PurchaseRequested);
         Event(() => GetPurchaseState);
+        Event(() => InventoryItemsGranted);
     }
 
     private void ConfigureInitialState()
@@ -41,7 +45,12 @@ public class PurchaseStateMachine : MassTransitStateMachine<PurchaseState>
                         context.Instance.Received = DateTimeOffset.UtcNow;
                         context.Instance.LastUpdated = context.Instance.Received;
                     })
-                    .Activity(x => x.OfType<CalculatePurchaseTotalActivity>())
+                    .Activity(x => x.OfType<CalculatePurchaseTotalActivity>()
+                    .Send(context => new GrantItems(
+                        context.Instance.UserId, 
+                        context.Instance.ItemId, 
+                        context.Data.Quantity,
+                        context.Instance.CorrelationId)))
                     .TransitionTo(Accepted)
                     .Catch<Exception>(ex => ex
                         .Then(context =>
@@ -51,6 +60,17 @@ public class PurchaseStateMachine : MassTransitStateMachine<PurchaseState>
                         })
                         .TransitionTo(Faulted))
             );
+    }
+
+    private void ConfigureAccepted()
+    {
+        During(Accepted,
+            When(InventoryItemsGranted)
+                .Then(context =>
+                {
+                    context.Instance.LastUpdated = DateTimeOffset.UtcNow;
+                })
+                .TransitionTo(ItemsGranted));
     }
 
     private void ConfigureAny()

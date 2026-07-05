@@ -13,8 +13,10 @@ using Play.Common.Identity;
 using Play.Common.MassTransit;
 using Play.Common.MongoDB;
 using Play.Common.Settings;
+using Play.Inventory.Contracts;
 using Play.Trading.API.Entities;
 using Play.Trading.API.Exceptions;
+using Play.Trading.API.Settings;
 using Play.Trading.API.StateMachines;
 
 namespace Play.Trading.API;
@@ -93,6 +95,10 @@ public class Startup
                     r.DatabaseName = serviceSettings.ServiceName;
                 });
         });
+        
+        var queueSettings = Configuration.GetSection(nameof(QueueSettings)).Get<QueueSettings>();
+        EndpointConvention.Map<GrantItems>(new Uri(queueSettings.GrantItemsQueueAddress));
+        
         services.AddMassTransitHostedService();
         services.AddGenericRequestClient();
     }
