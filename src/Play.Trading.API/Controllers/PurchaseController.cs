@@ -25,11 +25,11 @@ public class PurchaseController : ControllerBase
         _purchaseClient = purchaseClient;
     }
 
-    [HttpGet("status/{correlationId:guid}")]
-    public async Task<ActionResult<PurchaseDto>> GetStatusAsync(Guid correlationId)
+    [HttpGet("status/{idempotencyId:guid}")]
+    public async Task<ActionResult<PurchaseDto>> GetStatusAsync(Guid idempotencyId)
     {
         var response = await _purchaseClient.GetResponse<PurchaseState>(
-            new GetPurchaseState(correlationId));
+            new GetPurchaseState(idempotencyId));
 
         var purchaseState = response.Message;
         var purchase = new PurchaseDto(
@@ -50,16 +50,18 @@ public class PurchaseController : ControllerBase
     public async Task<IActionResult> PostAsync(SubmitPurchaseDto purchase)
     {
         var userId = User.FindFirstValue("sub");
-        var correlationId = Guid.NewGuid();
         var message = new PurchaseRequested(
             Guid.Parse(userId),
-            purchase.ItemId.Value,
+            purchase.ItemId!.Value,
             purchase.Quantity,
-            correlationId
+            purchase.IdempotencyId!.Value
         );
         
         await _publishEndpoint.Publish(message);
 
-        return AcceptedAtAction(nameof(GetStatusAsync), new { correlationId }, new { correlationId });
+        return AcceptedAtAction(
+            nameof(GetStatusAsync), 
+            new { purchase.IdempotencyId!.Value }, 
+            new { purchase.IdempotencyId!.Value });
     }
 }

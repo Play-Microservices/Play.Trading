@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Play.Trading.API;
 
-public record SubmitPurchaseDto([Required] Guid? ItemId, [Range(1, 100)] int Quantity);
+public record SubmitPurchaseDto([Required] Guid? ItemId, [Range(1, 100)] int Quantity, [Required] Guid? IdempotencyId);
 
 public record PurchaseDto(
     Guid UserId,
