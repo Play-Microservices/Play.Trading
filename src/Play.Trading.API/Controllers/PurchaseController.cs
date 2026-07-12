@@ -58,10 +58,11 @@ public class PurchaseController : ControllerBase
         );
         
         await _publishEndpoint.Publish(message);
-
+        
+        var idempotencyId = purchase.IdempotencyId!.Value;
         return AcceptedAtAction(
-            nameof(GetStatusAsync), 
-            new { purchase.IdempotencyId!.Value }, 
-            new { purchase.IdempotencyId!.Value });
+            nameof(GetStatusAsync),
+            new { idempotencyId },
+            new { idempotencyId });
     }
 }
