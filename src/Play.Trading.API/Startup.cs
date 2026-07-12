@@ -36,6 +36,8 @@ public class Startup
     {
         services.AddMongo(Configuration)
             .AddMongoRepository<CatalogItem>("catalogitems")
+            .AddMongoRepository<InventoryItem>("inventoryitems")
+            .AddMongoRepository<ApplicationUser>("users")
             .AddJwtBearerAuthentication();
         AddMassTransit(services);
 
