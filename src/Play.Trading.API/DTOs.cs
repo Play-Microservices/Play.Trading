@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace Play.Trading.API;
@@ -15,3 +17,15 @@ public record PurchaseDto(
     DateTimeOffset Received,
     DateTimeOffset LastUpdated
 );
+
+public record StoreItemDto(
+    Guid Id,
+    string Name,
+    string Description,
+    decimal Price,
+    int OwnedQuantity
+    );
+public record StoreDto(
+    IEnumerable<StoreItemDto> Items,
+    decimal UserGil
+    );
