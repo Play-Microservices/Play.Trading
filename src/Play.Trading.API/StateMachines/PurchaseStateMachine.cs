@@ -1,15 +1,20 @@
 using System;
+using System.Threading.Tasks;
 using Automatonymous;
 using MassTransit;
+using Microsoft.AspNetCore.SignalR;
 using Play.Identity.Contracts;
 using Play.Inventory.Contracts;
 using Play.Trading.API.Activities;
 using Play.Trading.API.Contracts;
+using Play.Trading.API.SignalR;
 
 namespace Play.Trading.API.StateMachines;
 
 public class PurchaseStateMachine : MassTransitStateMachine<PurchaseState>
 {
+    private readonly IHubContext<MessageHub> _hub;
+    
     public State Accepted { get; }
     public State ItemsGranted { get; }
     public State Completed { get; }
@@ -22,8 +27,9 @@ public class PurchaseStateMachine : MassTransitStateMachine<PurchaseState>
     public Event<Fault<GrantItems>> GrantItemsFaulted { get; }
     public Event<Fault<DebitGil>> DebitGilFaulted { get; }
 
-    public PurchaseStateMachine()
+    public PurchaseStateMachine(IHubContext<MessageHub> hub)
     {
+        _hub = hub;
         InstanceState(x => x.CurrentState);
         ConfigureEvents();
         ConfigureInitialState();
@@ -71,7 +77,8 @@ public class PurchaseStateMachine : MassTransitStateMachine<PurchaseState>
                             context.Instance.ErrorMessage = context.Exception.Message;
                             context.Instance.LastUpdated = DateTimeOffset.UtcNow;
                         })
-                        .TransitionTo(Faulted))
+                        .TransitionTo(Faulted)
+                        .ThenAsync(context => SendStatusAsync(context.Instance)))
             );
     }
 
@@ -96,7 +103,8 @@ public class PurchaseStateMachine : MassTransitStateMachine<PurchaseState>
                     context.Instance.ErrorMessage = context.Data.Exceptions[0].Message;
                     context.Instance.LastUpdated = DateTimeOffset.UtcNow;
                 })
-                .TransitionTo(Faulted));
+                .TransitionTo(Faulted)
+                .ThenAsync(context => SendStatusAsync(context.Instance)));
     }
 
     private void ConfigureItemsGranted()
@@ -109,6 +117,7 @@ public class PurchaseStateMachine : MassTransitStateMachine<PurchaseState>
                 {
                     context.Instance.LastUpdated = DateTimeOffset.UtcNow;
                 })
+                .ThenAsync(context => SendStatusAsync(context.Instance))
                 .TransitionTo(Completed),
             When(DebitGilFaulted)
                 .Send(context => new SubtractItems(
@@ -121,7 +130,8 @@ public class PurchaseStateMachine : MassTransitStateMachine<PurchaseState>
                     context.Instance.ErrorMessage = context.Data.Exceptions[0].Message;
                     context.Instance.LastUpdated = DateTimeOffset.UtcNow;
                 })
-                .TransitionTo(Faulted));
+                .TransitionTo(Faulted)
+                .ThenAsync(context => SendStatusAsync(context.Instance)));
     }
 
     private void ConfigureCompleted()
@@ -147,5 +157,12 @@ public class PurchaseStateMachine : MassTransitStateMachine<PurchaseState>
             Ignore(InventoryItemsGranted),
             Ignore(GilDebited)
             );
+    }
+    
+    private Task SendStatusAsync(PurchaseState state)
+    {
+        return _hub.Clients
+            .User(state.UserId.ToString())
+            .SendAsync("ReceivePurchaseStatus", state);
     }
 }

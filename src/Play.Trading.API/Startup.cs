@@ -5,6 +5,7 @@ using GreenPipes;
 using MassTransit;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -18,6 +19,7 @@ using Play.Inventory.Contracts;
 using Play.Trading.API.Entities;
 using Play.Trading.API.Exceptions;
 using Play.Trading.API.Settings;
+using Play.Trading.API.SignalR;
 using Play.Trading.API.StateMachines;
 
 namespace Play.Trading.API;
@@ -55,6 +57,9 @@ public class Startup
         {
             c.SwaggerDoc("v1", new OpenApiInfo { Title = "Play.Trading.API", Version = "v1" });
         });
+        
+        services.AddSignalR();
+        services.AddSingleton<IUserIdProvider, UserIdProvider>();
     }
 
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -69,7 +74,8 @@ public class Startup
             {
                 builder.WithOrigins(Configuration[AllowedOriginSetting]!)
                     .AllowAnyHeader()
-                    .AllowAnyMethod();
+                    .AllowAnyMethod()
+                    .AllowCredentials();
             });
         }
 
@@ -84,6 +90,7 @@ public class Startup
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllers();
+            endpoints.MapHub<MessageHub>("/messagehub");
         });
     }
 
