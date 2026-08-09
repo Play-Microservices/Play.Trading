@@ -427,3 +427,9 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Ignore Rider files
+.idea/
+
+# DS_USER files
+**/.DS_STORE
