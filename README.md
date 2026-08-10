@@ -19,37 +19,61 @@ dotnet add package Play.Common
 $env:GH_OWNER="Play-Microservices"
 $env:GH_USERNAME="[USERNAME HERE]"
 $env:GH_PAT="[PAT HERE]"
-$version="1.0.0"
-docker build --secret id=GH_USERNAME --secret id=GH_OWNER --secret id=GH_PAT -t play.trading:$version .
+$version="1.0.1"
+$appname="playeconomy"
+docker build \
+    --secret id=GH_USERNAME \
+    --secret id=GH_OWNER \
+    --secret id=GH_PAT \
+    -t "$appname.azurecr.io/play.trading:$version" .
 ```
 
 ```bash
 export GH_OWNER="Play-Microservices"
 export GH_USERNAME="[USERNAME HERE]"
 export GH_PAT="[PAT HERE]"
-version="1.0.0"
-
+version="1.0.1"
+appname="playeconomy"
 docker build \
   --secret id=GH_OWNER \
   --secret id=GH_USERNAME \
   --secret id=GH_PAT \
-  -t play.trading:$version .
+  -t "$appname.azurecr.io/play.trading:$version" .
 ```
 
 ## Run the docker image
 
 ```powershell
-version="1.0.2"
-docker run -it -=rm -p 5000:8080 --name catalog -e MongoDbSettings__Host=mongo -e RabbitMQSettings__Host=rabbitmq -e --network playinfrastructure_default play.trading:$version
+$version="1.0.1"
+$appname="playeconomy"
+$cosmosDbConnString="[CONN STRING HERE]"
+$serviceBusConnString="[CONN STRING HERE]"
+docker run -it --rm -p 5000:8080 --name trading \
+  -e MongoDbSettings__ConnectionString=$cosmosDbConnString \
+  -e ServiceBusSettings__ConnectionString=$serviceBusConnString \
+  -e ServiceSettings__MessageBroker="SERVICEBUS" \
+  "$appname.azurecr.io/play.trading:$version"
 ```
 
 ```bash
-version="1.0.2"
+version="1.0.1"
+appname="playeconomy"
+cosmosDbConnString="[CONN STRING HERE]"
+serviceBusConnString="[CONN STRING HERE]"
 docker run -it --rm \
   -p 5006:8080 \
-  --name catalog \
-  -e MongoDbSettings__Host=mongo \
-  -e RabbitMQSettings__Host=rabbitmq \
-  --network playinfrastructure_default \
-  "play.trading:$version"
+  --name trading \
+  -e MongoDbSettings__ConnectionString=$cosmosDbConnString \
+  -e ServiceBusSettings__ConnectionString=$serviceBusConnString \
+  -e ServiceSettings__MessageBroker="SERVICEBUS" \
+  "$appname.azurecr.io/play.trading:$version"
+```
+
+### Publishing the Docker image
+
+```bash
+appname="playeconomy"
+version="1.0.1"
+az acr login --name $appname
+docker push "$appname.azurecr.io/play.trading:$version"
 ```

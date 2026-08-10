@@ -98,7 +98,7 @@ public class Startup
     {
         services.AddMassTransit(configure =>
         {
-            configure.UsingPlayEconomyRabbitMQ(retryConfigurator =>
+            configure.UsingPlayEconomyMessageBroker(Configuration, retryConfigurator =>
             {
                 retryConfigurator.Interval(3, TimeSpan.FromSeconds(5));
                 retryConfigurator.Ignore<UnknownItemException>();
