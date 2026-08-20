@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using Play.Common.HealthChecks;
 using Play.Common.Identity;
 using Play.Common.MassTransit;
 using Play.Common.MongoDB;
@@ -44,6 +45,10 @@ public class Startup
             .AddMongoRepository<ApplicationUser>("users")
             .AddJwtBearerAuthentication();
         AddMassTransit(services);
+
+        services
+            .AddHealthChecks()
+            .AddMongoDb();
 
         services.AddControllers(options =>
         {
@@ -91,6 +96,7 @@ public class Startup
         {
             endpoints.MapControllers();
             endpoints.MapHub<MessageHub>("/messagehub");
+            endpoints.MapPlayEconomyHealthChecks();
         });
     }
 
